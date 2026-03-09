@@ -1,0 +1,6 @@
+myenv/
+tests/
+seed.py
+.env
+__pycache__/
+.DS_Store
