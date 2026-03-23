@@ -10,8 +10,7 @@ load_dotenv()
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
-    app.config["JWT_SECRET_KEY"] = "super-secret-key"
-
+    app.json.ensure_ascii = False
     db.init_app(app)
     migrate.init_app(app, db)
     jwt.init_app(app)

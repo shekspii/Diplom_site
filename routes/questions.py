@@ -34,6 +34,9 @@ def add_option(question_id):
 
     if question.type == "text":
         return jsonify({"error": "Text questions cannot have options"}), 400
+    
+    if question.survey.status != "draft":
+        return jsonify({"error": "Cannot modify options in non-draft survey"}), 400
 
     data = request.get_json()
 
