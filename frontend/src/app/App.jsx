@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { clearAccessToken, getAccessToken } from './api.js'
 import { SUBJECT_OPTIONS } from './subjects.js'
 
@@ -66,11 +66,11 @@ const visionImage =
   'https://images.unsplash.com/photo-1455390582262-044cdead277a?auto=format&fit=crop&w=1200&q=80'
 
 export default function App() {
+  const navigate = useNavigate()
   const [isAuthenticated, setIsAuthenticated] = useState(Boolean(getAccessToken()))
   const [subject, setSubject] = useState(SUBJECT_OPTIONS[0])
   const [questionCount, setQuestionCount] = useState(20)
   const [surveyKey, setSurveyKey] = useState('')
-  const [keyMessage, setKeyMessage] = useState('')
   const [keyError, setKeyError] = useState('')
 
   const estimatedMinutes = Math.max(20, questionCount * 3)
@@ -89,13 +89,12 @@ export default function App() {
     setSurveyKey(normalizedKey)
 
     if (!normalizedKey) {
-      setKeyMessage('')
       setKeyError('Введите уникальный ключ опроса.')
       return
     }
 
     setKeyError('')
-    setKeyMessage(`Ключ ${normalizedKey} сохранён. Переход к опросу подключим следующим шагом.`)
+    navigate(`/survey/access/${normalizedKey}`)
   }
 
   return (
@@ -214,10 +213,10 @@ export default function App() {
             </div>
 
             <div className="panel-card mini access-card">
-              <span className="panel-title">Чужой опрос по ключу</span>
+              <span className="panel-title">Пройти опрос преподавателя</span>
               <form className="access-form" onSubmit={handleSurveyKeySubmit}>
                 <label className="generator-label">
-                  <span>Уникальный ключ опроса</span>
+                  <span>Уникальный ключ опроса:</span>
                   <input
                     type="text"
                     value={surveyKey}
@@ -229,7 +228,6 @@ export default function App() {
                   Перейти к опросу
                 </button>
               </form>
-              {keyMessage && <div className="auth-message success">{keyMessage}</div>}
               {keyError && <div className="auth-message error">{keyError}</div>}
             </div>
 

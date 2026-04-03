@@ -8,6 +8,7 @@ import Register from './app/Register.jsx'
 import Profile from './app/Profile.jsx'
 import AdminPage from './app/AdminPage.jsx'
 import SurveyBuilderPage from './app/SurveyBuilderPage.jsx'
+import SurveyTakePage from './app/SurveyTakePage.jsx'
 import './styles/global.css'
 
 const queryClient = new QueryClient({
@@ -30,6 +31,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
           <Route path="/profile" element={<Profile />} />
           <Route path="/admin" element={<AdminPage />} />
           <Route path="/surveys/manage" element={<SurveyBuilderPage />} />
+          <Route path="/survey/access/:shareKey" element={<SurveyTakePage />} />
         </Routes>
       </BrowserRouter>
     </QueryClientProvider>
