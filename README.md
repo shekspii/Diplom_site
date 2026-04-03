@@ -34,23 +34,40 @@
 
 ### Предполагаемая структура проекта:
 ```
-project/
-│
-├── backend/
-│   ├── app/
-│   │   ├── routes
-│   │   ├── services
-│   │   ├── models
-│   │   └── config
-│   │
-│   └── run.py
-│
-├── frontend/
-│   ├── src
-│   ├── public
-│   └── package.json
-│
+.
 ├── README.md
-└── requirements.txt
+├── backend
+│   ├── app.py
+│   ├── config.py
+│   ├── extensions.py
+│   ├── migrations
+│   ├── models.py
+│   ├── myenv
+│   ├── postman
+│   ├── requirements.txt
+│   ├── routes
+│   ├── seed.py
+│   └── tests
+└── frontend
+    ├── dist
+    ├── index.html
+    ├── package.json
+    ├── src
+    │   ├── app
+    │   │   ├── AdminPage.jsx
+    │   │   ├── App.jsx
+    │   │   ├── Login.jsx
+    │   │   ├── Profile.jsx
+    │   │   ├── Register.jsx
+    │   │   ├── SurveyBuilderPage.jsx
+    │   │   ├── SurveyTakePage.jsx
+    │   │   ├── api.js
+    │   │   └── subjects.js
+    │   ├── assets
+    │   ├── components
+    │   ├── main.jsx
+    │   └── styles
+    │       └── global.css
+    └── vite.config.js
 ```
 
