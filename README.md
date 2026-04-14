@@ -49,9 +49,7 @@
 │   ├── seed.py
 │   └── tests
 └── frontend
-    ├── dist
     ├── index.html
-    ├── package.json
     ├── src
     │   ├── app
     │   │   ├── AdminPage.jsx

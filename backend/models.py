@@ -125,6 +125,8 @@ class QuestionBankItem(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     subject = db.Column(db.String(255), nullable=False)
+    exam_task_number = db.Column(db.Integer, nullable=False, default=1)
+    correct_text_answer = db.Column(db.Text)
     topic = db.Column(db.String(255))
     difficulty = db.Column(db.String(50))
     text = db.Column(db.Text, nullable=False)
@@ -183,6 +185,12 @@ class TestSession(db.Model):
         back_populates="session",
         cascade="all, delete-orphan"
     )
+    submission = db.relationship(
+        "TestSubmission",
+        back_populates="session",
+        uselist=False,
+        cascade="all, delete-orphan"
+    )
 
 
 class TestSessionQuestion(db.Model):
@@ -205,3 +213,68 @@ class TestSessionQuestion(db.Model):
     position = db.Column(db.Integer, nullable=False)
 
     session = db.relationship("TestSession", back_populates="questions")
+    bank_question = db.relationship("QuestionBankItem")
+
+
+class TestSubmission(db.Model):
+    __tablename__ = "test_submissions"
+
+    id = db.Column(db.Integer, primary_key=True)
+    session_id = db.Column(
+        db.Integer,
+        db.ForeignKey("test_sessions.id", ondelete="CASCADE"),
+        nullable=False,
+        unique=True
+    )
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    score = db.Column(db.Integer, nullable=False, default=0)
+    total_questions = db.Column(db.Integer, nullable=False)
+    submitted_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    session = db.relationship("TestSession", back_populates="submission")
+    answers = db.relationship(
+        "TestSubmissionAnswer",
+        back_populates="submission",
+        cascade="all, delete-orphan"
+    )
+
+
+class TestSubmissionAnswer(db.Model):
+    __tablename__ = "test_submission_answers"
+
+    id = db.Column(db.Integer, primary_key=True)
+    submission_id = db.Column(
+        db.Integer,
+        db.ForeignKey("test_submissions.id", ondelete="CASCADE"),
+        nullable=False
+    )
+    bank_question_id = db.Column(
+        db.Integer,
+        db.ForeignKey("question_bank_items.id"),
+        nullable=False
+    )
+    text_answer = db.Column(db.Text)
+
+    submission = db.relationship("TestSubmission", back_populates="answers")
+    selected_options = db.relationship(
+        "TestSubmissionAnswerOption",
+        back_populates="answer",
+        cascade="all, delete-orphan"
+    )
+
+
+class TestSubmissionAnswerOption(db.Model):
+    __tablename__ = "test_submission_answer_options"
+
+    answer_id = db.Column(
+        db.Integer,
+        db.ForeignKey("test_submission_answers.id", ondelete="CASCADE"),
+        primary_key=True
+    )
+    option_id = db.Column(
+        db.Integer,
+        db.ForeignKey("question_bank_options.id"),
+        primary_key=True
+    )
+
+    answer = db.relationship("TestSubmissionAnswer", back_populates="selected_options")

@@ -42,13 +42,11 @@ function buildAnswersPayload(questions, answers) {
       continue
     }
 
-    if (question.type === 'multiple') {
-      if (Array.isArray(value) && value.length > 0) {
-        payload.push({
-          question_id: question.id,
-          option_ids: value.map((item) => Number(item))
-        })
-      }
+    if (question.type === 'multiple' && Array.isArray(value) && value.length > 0) {
+      payload.push({
+        question_id: question.id,
+        option_ids: value.map((item) => Number(item))
+      })
     }
   }
 
@@ -56,19 +54,28 @@ function buildAnswersPayload(questions, answers) {
 }
 
 export default function SurveyTakePage() {
-  const { shareKey = '' } = useParams()
+  const { shareKey = '', sessionId = '' } = useParams()
   const normalizedShareKey = shareKey.trim().toUpperCase()
+  const isGeneratedTest = Boolean(sessionId)
   const [answers, setAnswers] = useState({})
   const [submitMessage, setSubmitMessage] = useState('')
   const [submitError, setSubmitError] = useState('')
+  const [submissionResult, setSubmissionResult] = useState(null)
 
-  const surveyQuery = useQuery({
-    queryKey: ['survey-by-key', normalizedShareKey],
-    queryFn: () => apiRequest(`/surveys/access/${normalizedShareKey}`, { auth: true }),
-    enabled: Boolean(normalizedShareKey)
+  const contentQuery = useQuery({
+    queryKey: isGeneratedTest
+      ? ['generated-test-session', sessionId]
+      : ['survey-by-key', normalizedShareKey],
+    queryFn: () =>
+      isGeneratedTest
+        ? apiRequest(`/tests/sessions/${sessionId}`, { auth: true })
+        : apiRequest(`/surveys/access/${normalizedShareKey}`, { auth: true }),
+    enabled: isGeneratedTest ? Boolean(sessionId) : Boolean(normalizedShareKey)
   })
 
-  const questions = surveyQuery.data?.questions ?? []
+  const questions = contentQuery.data?.questions ?? []
+  const title = contentQuery.data?.title || (isGeneratedTest ? 'Тренировочный тест' : 'Опрос')
+  const resultSummary = submissionResult || contentQuery.data?.submission || null
 
   const completionStats = useMemo(() => {
     let answeredCount = 0
@@ -97,16 +104,21 @@ export default function SurveyTakePage() {
 
   const submitMutation = useMutation({
     mutationFn: (payload) =>
-      apiRequest(`/surveys/access/${normalizedShareKey}/responses`, {
-        method: 'POST',
-        auth: true,
-        body: JSON.stringify(payload)
-      }),
+      apiRequest(
+        isGeneratedTest ? `/tests/sessions/${sessionId}/submit` : `/surveys/access/${normalizedShareKey}/responses`,
+        {
+          method: 'POST',
+          auth: true,
+          body: JSON.stringify(payload)
+        }
+      ),
     onSuccess: (data) => {
       setSubmitError('')
-      setSubmitMessage(data.message || 'Опрос успешно отправлен.')
+      setSubmissionResult(data.submission || null)
+      setSubmitMessage(data.message || (isGeneratedTest ? 'Тест успешно отправлен.' : 'Опрос успешно отправлен.'))
     },
     onError: (error) => {
+      setSubmissionResult(null)
       setSubmitMessage('')
       setSubmitError(error.message)
     }
@@ -159,25 +171,28 @@ export default function SurveyTakePage() {
     setAnswers(buildInitialAnswers(questions))
     setSubmitError('')
     setSubmitMessage('')
+    setSubmissionResult(null)
   }
 
-  if (surveyQuery.isLoading) {
+  if (contentQuery.isLoading) {
     return (
       <div className="survey-take-page">
         <div className="survey-take-shell">
-          <div className="survey-loading-card">Загружаем опрос по ключу {normalizedShareKey}...</div>
+          <div className="survey-loading-card">
+            {isGeneratedTest ? `Загружаем тест #${sessionId}...` : `Загружаем опрос по ключу ${normalizedShareKey}...`}
+          </div>
         </div>
       </div>
     )
   }
 
-  if (surveyQuery.isError) {
+  if (contentQuery.isError) {
     return (
       <div className="survey-take-page">
         <div className="survey-take-shell">
           <div className="survey-error-card">
-            <h1>Опрос не найден</h1>
-            <p>{surveyQuery.error.message}</p>
+            <h1>{isGeneratedTest ? 'Тест не найден' : 'Опрос не найден'}</h1>
+            <p>{contentQuery.error.message}</p>
             <Link className="secondary link-button" to="/">
               Вернуться на главную
             </Link>
@@ -187,28 +202,36 @@ export default function SurveyTakePage() {
     )
   }
 
-  const survey = surveyQuery.data
+  const content = contentQuery.data
 
   return (
     <div className="survey-take-page">
       <div className="survey-take-shell">
         <header className="survey-take-header">
           <div>
-            <p className="eyebrow">Прохождение опроса</p>
-            <h1>{survey.title}</h1>
+            <p className="eyebrow">{isGeneratedTest ? 'Прохождение теста' : 'Прохождение опроса'}</p>
+            <h1>{title}</h1>
             <p className="survey-take-description">
-              {survey.description || 'Описание опроса не указано. Просто ответьте на вопросы и отправьте форму.'}
+              {content.description || 'Описание не указано. Просто ответьте на вопросы и отправьте форму.'}
             </p>
           </div>
           <div className="survey-meta-card">
             <div className="survey-meta-row">
               <span>Предмет</span>
-              <strong>{survey.subject}</strong>
+              <strong>{content.subject}</strong>
             </div>
-            <div className="survey-meta-row">
-              <span>Ключ</span>
-              <strong>{survey.share_key}</strong>
-            </div>
+            {!isGeneratedTest && content.share_key && (
+              <div className="survey-meta-row">
+                <span>Ключ</span>
+                <strong>{content.share_key}</strong>
+              </div>
+            )}
+            {isGeneratedTest && (
+              <div className="survey-meta-row">
+                <span>Сессия</span>
+                <strong>#{content.id}</strong>
+              </div>
+            )}
             <div className="survey-meta-row">
               <span>Вопросов</span>
               <strong>{questions.length}</strong>
@@ -226,7 +249,11 @@ export default function SurveyTakePage() {
           {questions.map((question) => (
             <section key={question.id} className="survey-question-block">
               <div className="survey-question-head">
-                <span className="survey-question-number">Вопрос {question.sequence}</span>
+                <span className="survey-question-number">
+                  {isGeneratedTest && question.exam_task_number
+                    ? `Задание ${question.exam_task_number}`
+                    : `Вопрос ${question.sequence}`}
+                </span>
                 <h2>{question.text}</h2>
               </div>
 
@@ -289,14 +316,68 @@ export default function SurveyTakePage() {
             >
               Сбросить ответы
             </button>
-            <button className="primary generator-submit" type="submit" disabled={submitMutation.isPending || Boolean(submitMessage)}>
-              {submitMutation.isPending ? 'Отправляем...' : 'Отправить опрос'}
+            <button
+              className="primary generator-submit"
+              type="submit"
+              disabled={submitMutation.isPending || Boolean(submitMessage)}
+            >
+              {submitMutation.isPending
+                ? 'Отправляем...'
+                : isGeneratedTest
+                  ? 'Отправить тест'
+                  : 'Отправить опрос'}
             </button>
           </div>
 
           {submitMessage && <div className="auth-message success">{submitMessage}</div>}
           {submitError && <div className="auth-message error">{submitError}</div>}
         </form>
+
+        {isGeneratedTest && resultSummary && (
+          <section className="survey-results-card">
+            <div className="builder-card-header">
+              <div>
+                <h3>Разбор результата</h3>
+                <p>
+                  Верно решено {resultSummary.score} из {resultSummary.total_questions}.
+                </p>
+              </div>
+            </div>
+
+            <div className="survey-results-list">
+              {resultSummary.breakdown.map((item) => (
+                <article
+                  key={item.question_id}
+                  className={`survey-result-item${item.is_correct ? ' correct' : ' incorrect'}`}
+                >
+                  <div className="survey-result-head">
+                    <span>
+                      Задание {item.exam_task_number || item.sequence}
+                    </span>
+                    <strong>{item.is_correct ? 'Верно' : item.is_answered ? 'Неверно' : 'Нет ответа'}</strong>
+                  </div>
+                  <p>{item.text}</p>
+                  <div className="survey-result-meta">
+                    <span>Ваш ответ</span>
+                    <strong>
+                      {Array.isArray(item.user_answer)
+                        ? item.user_answer.join(', ') || 'Нет ответа'
+                        : item.user_answer || 'Нет ответа'}
+                    </strong>
+                  </div>
+                  <div className="survey-result-meta">
+                    <span>Правильный ответ</span>
+                    <strong>
+                      {Array.isArray(item.correct_answer)
+                        ? item.correct_answer.join(', ')
+                        : item.correct_answer || 'Не указан'}
+                    </strong>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+        )}
 
         <div className="survey-take-footer">
           <Link className="secondary link-button" to="/">

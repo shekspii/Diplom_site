@@ -43,6 +43,8 @@ def _serialize_bank_question(question):
     return {
         "id": question.id,
         "subject": question.subject,
+        "exam_task_number": question.exam_task_number,
+        "correct_text_answer": question.correct_text_answer,
         "topic": question.topic,
         "difficulty": question.difficulty,
         "text": question.text,
@@ -151,8 +153,10 @@ def create_question_bank_item():
     data = request.get_json(silent=True) or {}
 
     subject = (data.get("subject") or "").strip()
+    exam_task_number = data.get("exam_task_number")
     text = (data.get("text") or "").strip()
     question_type = (data.get("type") or "").strip()
+    correct_text_answer = (data.get("correct_text_answer") or "").strip() or None
     topic = (data.get("topic") or "").strip() or None
     difficulty = (data.get("difficulty") or "").strip() or None
     is_active = bool(data.get("is_active", True))
@@ -160,6 +164,8 @@ def create_question_bank_item():
 
     if not subject:
         return {"error": "Subject is required"}, 400
+    if not isinstance(exam_task_number, int) or not 1 <= exam_task_number <= 100:
+        return {"error": "Exam task number must be an integer between 1 and 100"}, 400
     if not text:
         return {"error": "Question text is required"}, 400
     if question_type not in QUESTION_TYPES:
@@ -189,10 +195,14 @@ def create_question_bank_item():
         if question_type == "multiple" and correct_count < 1:
             return {"error": "Multiple choice question must have at least one correct option"}, 400
     else:
+        if not correct_text_answer:
+            return {"error": "Text question must have a correct text answer"}, 400
         normalized_options = []
 
     question = QuestionBankItem(
         subject=subject,
+        exam_task_number=exam_task_number,
+        correct_text_answer=correct_text_answer if question_type == "text" else None,
         topic=topic,
         difficulty=difficulty,
         text=text,

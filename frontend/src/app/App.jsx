@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { clearAccessToken, getAccessToken } from './api.js'
+import { apiRequest, clearAccessToken, getAccessToken } from './api.js'
 import { SUBJECT_OPTIONS } from './subjects.js'
 
 const highlights = [
@@ -72,6 +72,8 @@ export default function App() {
   const [questionCount, setQuestionCount] = useState(20)
   const [surveyKey, setSurveyKey] = useState('')
   const [keyError, setKeyError] = useState('')
+  const [generationStatus, setGenerationStatus] = useState('idle')
+  const [generationError, setGenerationError] = useState('')
 
   const estimatedMinutes = Math.max(20, questionCount * 3)
   const intensityLabel =
@@ -80,6 +82,27 @@ export default function App() {
   const handleLogout = () => {
     clearAccessToken()
     setIsAuthenticated(false)
+  }
+
+  const handleGenerateTest = async () => {
+    setGenerationStatus('loading')
+    setGenerationError('')
+
+    try {
+      const data = await apiRequest('/tests/generate', {
+        method: 'POST',
+        auth: true,
+        body: JSON.stringify({
+          subject,
+          question_count: questionCount
+        })
+      })
+      setGenerationStatus('success')
+      navigate(`/tests/sessions/${data.session_id}`)
+    } catch (error) {
+      setGenerationStatus('error')
+      setGenerationError(error.message)
+    }
   }
 
   const handleSurveyKeySubmit = (event) => {
@@ -179,14 +202,14 @@ export default function App() {
                   <div className="generator-range-wrap">
                     <input
                       type="range"
-                      min="5"
+                      min="1"
                       max="30"
                       step="1"
                       value={questionCount}
                       onChange={(event) => setQuestionCount(Number(event.target.value))}
                     />
                     <div className="range-values">
-                      <span>5</span>
+                      <span>1</span>
                       <strong>{questionCount}</strong>
                       <span>30</span>
                     </div>
@@ -206,10 +229,16 @@ export default function App() {
                   ))}
                 </div>
 
-                <button className="primary generator-submit" type="button">
-                  Сгенерировать тест
+                <button
+                  className="primary generator-submit"
+                  type="button"
+                  onClick={handleGenerateTest}
+                  disabled={generationStatus === 'loading'}
+                >
+                  {generationStatus === 'loading' ? 'Генерируем...' : 'Сгенерировать тест'}
                 </button>
               </form>
+              {generationError && <div className="auth-message error">{generationError}</div>}
             </div>
 
             <div className="panel-card mini access-card">

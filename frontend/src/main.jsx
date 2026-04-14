@@ -32,6 +32,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
           <Route path="/admin" element={<AdminPage />} />
           <Route path="/surveys/manage" element={<SurveyBuilderPage />} />
           <Route path="/survey/access/:shareKey" element={<SurveyTakePage />} />
+          <Route path="/tests/sessions/:sessionId" element={<SurveyTakePage />} />
         </Routes>
       </BrowserRouter>
     </QueryClientProvider>

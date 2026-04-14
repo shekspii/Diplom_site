@@ -5,11 +5,14 @@ import { apiRequest, clearAccessToken, getAccessToken } from './api.js'
 import { SUBJECT_OPTIONS } from './subjects.js'
 
 const EMPTY_OPTION = { text: '', is_correct: false }
+const TASK_NUMBER_OPTIONS = Array.from({ length: 25 }, (_, index) => index + 1)
 
 const EMPTY_FORM = {
   subject: SUBJECT_OPTIONS[0],
+  exam_task_number: TASK_NUMBER_OPTIONS[0],
   text: '',
   type: 'single',
+  correct_text_answer: '',
   options: [{ ...EMPTY_OPTION }, { ...EMPTY_OPTION }]
 }
 
@@ -86,6 +89,7 @@ export default function AdminPage() {
     setBankForm((current) => ({
       ...current,
       type: nextType,
+      correct_text_answer: nextType === 'text' ? current.correct_text_answer : '',
       options: normalizeFormForType(nextType, current.options)
     }))
   }
@@ -123,8 +127,10 @@ export default function AdminPage() {
   const handleSubmit = () => {
     createBankQuestionMutation.mutate({
       subject: bankForm.subject,
+      exam_task_number: Number(bankForm.exam_task_number),
       text: bankForm.text,
       type: bankForm.type,
+      correct_text_answer: bankForm.type === 'text' ? bankForm.correct_text_answer : '',
       options: bankForm.type === 'text' ? [] : bankForm.options
     })
   }
@@ -303,6 +309,25 @@ export default function AdminPage() {
                     </select>
                   </label>
 
+                  <label>
+                    Номер задания ГИА
+                    <select
+                      value={bankForm.exam_task_number}
+                      onChange={(event) =>
+                        setBankForm((current) => ({
+                          ...current,
+                          exam_task_number: Number(event.target.value)
+                        }))
+                      }
+                    >
+                      {TASK_NUMBER_OPTIONS.map((taskNumber) => (
+                        <option key={taskNumber} value={taskNumber}>
+                          {taskNumber}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
                   <label className="builder-textarea-wrap">
                     Текст вопроса
                     <textarea
@@ -324,6 +349,24 @@ export default function AdminPage() {
                     </select>
                   </label>
                 </div>
+
+                {bankForm.type === 'text' && (
+                  <div className="builder-form-grid">
+                    <label className="builder-textarea-wrap">
+                      Правильный текстовый ответ
+                      <textarea
+                        value={bankForm.correct_text_answer}
+                        onChange={(event) =>
+                          setBankForm((current) => ({
+                            ...current,
+                            correct_text_answer: event.target.value
+                          }))
+                        }
+                        placeholder="Введите правильный текстовый ответ"
+                      />
+                    </label>
+                  </div>
+                )}
 
                 {bankForm.type !== 'text' && (
                   <div className="admin-options-editor">
@@ -374,7 +417,11 @@ export default function AdminPage() {
                     className="primary"
                     type="button"
                     onClick={handleSubmit}
-                    disabled={createBankQuestionMutation.isPending || !bankForm.text.trim()}
+                    disabled={
+                      createBankQuestionMutation.isPending ||
+                      !bankForm.text.trim() ||
+                      (bankForm.type === 'text' && !bankForm.correct_text_answer.trim())
+                    }
                   >
                     Сохранить вопрос банка
                   </button>
@@ -459,11 +506,17 @@ export default function AdminPage() {
                         <div className="admin-bank-head">
                           <div>
                             <strong>{item.subject}</strong>
-                            <span>{item.type}</span>
+                            <span>Задание {item.exam_task_number} · {item.type}</span>
                           </div>
                           <span>{item.is_active ? 'active' : 'inactive'}</span>
                         </div>
                         <p>{item.text}</p>
+                        {item.type === 'text' && item.correct_text_answer && (
+                          <div className="admin-bank-answer">
+                            <span>Правильный ответ</span>
+                            <strong>{item.correct_text_answer}</strong>
+                          </div>
+                        )}
                         {item.options.length > 0 && (
                           <div className="admin-bank-options">
                             {item.options.map((option) => (

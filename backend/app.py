@@ -3,7 +3,7 @@ import click
 from config import Config
 from extensions import db, migrate, jwt
 from models import *
-from routes import admin_bp, auth_bp, questions_bp, surveys_bp
+from routes import admin_bp, auth_bp, questions_bp, surveys_bp, tests_bp
 from flask_cors import CORS
 from sqlalchemy.exc import OperationalError
 from werkzeug.exceptions import HTTPException
@@ -35,6 +35,7 @@ def create_app():
     app.register_blueprint(admin_bp)
     app.register_blueprint(questions_bp)
     app.register_blueprint(surveys_bp)
+    app.register_blueprint(tests_bp)
 
     @app.cli.command("create-admin")
     @click.option("--email", default=None, help="Email администратора")
